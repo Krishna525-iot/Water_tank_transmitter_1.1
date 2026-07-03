@@ -1,0 +1,6 @@
+../Core/Src/adc.c:48:9:ADC_GetTankLevel	1
+../Core/Src/adc.c:49:9:ADC_GetWellDry	1
+../Core/Src/adc.c:52:17:read_adc_raw	1
+../Core/Src/adc.c:68:6:ADC_Init	1
+../Core/Src/adc.c:75:6:ADC_ReadAllChannels	8
+../Core/Src/adc.c:125:6:ADC_ClassifyPacket	1

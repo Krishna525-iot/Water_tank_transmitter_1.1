@@ -1,0 +1,8 @@
+../Core/Src/rf.c:38:13:uart_ln	16	static
+../Core/Src/rf.c:53:13:rf_us	16	static
+../Core/Src/rf.c:69:9:RF_CRC8	24	static
+../Core/Src/rf.c:84:13:rf_bit	16	static
+../Core/Src/rf.c:102:13:rf_byte	24	static
+../Core/Src/rf.c:111:6:RF_SendPacket	40	static
+../Core/Src/rf.c:145:6:RF_Init	8	static
+../Core/Src/rf.c:173:6:RF_Service	112	static

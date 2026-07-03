@@ -1,0 +1,11 @@
+../Core/Src/device_id.c:25:17:mix32	32	static
+../Core/Src/device_id.c:37:6:DeviceID_Init	32	static
+../Core/Src/device_id.c:56:10:DeviceID_GetOwn	4	static
+../Core/Src/device_id.c:61:6:DeviceID_GetHex	16	static
+../Core/Src/device_id.c:73:10:PairedDev_Init	4	static
+../Core/Src/device_id.c:74:10:PairedDev_Clear	4	static
+../Core/Src/device_id.c:75:10:PairedDev_Add	16	static
+../Core/Src/device_id.c:76:10:PairedDev_Remove	16	static
+../Core/Src/device_id.c:77:10:PairedDev_IsAllowed	16	static
+../Core/Src/device_id.c:78:10:PairedDev_Count	4	static
+../Core/Src/device_id.c:79:10:PairedDev_Get	16	static
