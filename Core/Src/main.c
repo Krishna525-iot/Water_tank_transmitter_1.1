@@ -35,7 +35,7 @@
 
 /* ── Cadences ────────────────────────────────────────────────────────── */
 #define MAIN_LOOP_TICK_MS    200UL
-#define ADC_REFRESH_MS      9000UL
+#define ADC_REFRESH_MS      1000UL   /* probes every 1 s; a change is sent at once */
 #define BUTTON_DEBOUNCE_MS   200UL
 #define STATS_INTERVAL_MS  60000UL
 
@@ -150,7 +150,7 @@ int main(void)
      *  │   RADIO_MODE_RF433  (0)  FS1000A OOK, simplex bcast     │
      *  └──────────────────────────────────────────────────────────┘
      * ================================================================ */
-    uint8_t g_radio_mode = RADIO_MODE_RF433;   /* ← CHANGE HERE */
+    uint8_t g_radio_mode = RADIO_MODE_LORA;   /* ← CHANGE HERE */
 
     /* ── Startup banner ───────────────────────────────────────────── */
     UART_PrintLn("\r\n");
@@ -266,7 +266,7 @@ int main(void)
             }
         }
 
-        /* ── Step 2: ADC refresh every 9s ──────────────────────────── */
+        /* ── Step 2: ADC refresh every 1 s ─────────────────────────── */
         if ((loopStart - lastADCTick) >= ADC_REFRESH_MS)
         {
             lastADCTick = loopStart;

@@ -80,6 +80,11 @@ static bool             s_loraHwOk         = false;
 #define REG_DETECTION_THRESHOLD 0x37
 #define REG_SYNC_WORD           0x39
 #define REG_VERSION             0x42
+/* RegVersion reads at init (expect 0x12), kept for SWD diagnostics */
+volatile uint8_t g_loraVer[3] = {0xEE, 0xEE, 0xEE};
+/* Live SX1278 check for SWD, every 2 s: [0]=RegVersion [1]=OpMode [2]=IRQ */
+volatile uint8_t g_loraLive[3] = {0};
+volatile uint32_t g_loraReinits = 0;   /* radio re-inits after a lost setup */
 
 /* ── RegOpMode for 433 MHz — LowFrequencyModeOn (bit3) = 1 ──────────── *
  *  0x88 = LoRa + LowFreq + Sleep                                        *
@@ -443,6 +448,7 @@ void LoRa_Init(void)
     uint8_t ver2 = LoRa_ReadReg(REG_VERSION); HAL_Delay(2);
     uint8_t ver3 = LoRa_ReadReg(REG_VERSION);
     uint8_t ver  = ver3;
+    g_loraVer[0] = ver1; g_loraVer[1] = ver2; g_loraVer[2] = ver3;   /* read over SWD */
 
     snprintf(dbg, sizeof(dbg),
              "[LORA TX] RegVersion reads: 0x%02X 0x%02X 0x%02X", ver1, ver2, ver3);
@@ -557,6 +563,31 @@ LoRa_TxResult LoRa_Service(uint8_t tank_level, uint8_t well_dry)
 {
     if (loraMode != LORA_MODE_TRANSMITTER) return LORA_TX_SKIPPED;
 
+    {
+        static uint32_t lastLiveTick = 0;
+        if ((HAL_GetTick() - lastLiveTick) >= 2000UL)
+        {
+            lastLiveTick  = HAL_GetTick();
+            g_loraLive[0] = LoRa_ReadReg(REG_VERSION);
+            g_loraLive[1] = LoRa_ReadReg(REG_OPMODE);
+            g_loraLive[2] = LoRa_ReadReg(REG_IRQ_FLAGS);
+
+            /* The Ra-02 can reset on its own (supply glitch when the board
+             * is moved): it comes back in FSK mode with all LoRa settings
+             * lost and TX sends into the void. Seen on the bench 29-09.
+             * Chip answers but is not in LoRa mode (or was missing at
+             * boot and is there now) -> set it up again and re-handshake. */
+            bool chipThere = (g_loraLive[0] == 0x12u);
+            bool inLora    = (g_loraLive[1] & 0x80u) != 0u;
+            if (chipThere && (!inLora || !s_loraHwOk))
+            {
+                g_loraReinits++;
+                UART_PrintLn("[LORA TX] radio lost its LoRa setup - re-init");
+                LoRa_Init();
+            }
+        }
+    }
+
     if (!s_loraHwOk)
     {
         static uint32_t lastHwErrPrint = 0;
@@ -621,7 +652,11 @@ LoRa_TxResult LoRa_Service(uint8_t tank_level, uint8_t well_dry)
         return LORA_TX_SKIPPED;
     }
 
-    bool data_due      = (now - s_lastDataTxTick) >= TX_DATA_INTERVAL_MS;
+    /* A new level or well state is sent at once (not after the 10 s
+     * cadence), so the Main Controller sees it within ~1 s. */
+    static uint8_t s_sentLevel = 0xFF, s_sentWellDry = 0xFF;
+    bool changed       = (tank_level != s_sentLevel) || (well_dry != s_sentWellDry);
+    bool data_due      = changed || (now - s_lastDataTxTick) >= TX_DATA_INTERVAL_MS;
     bool keepalive_due = (now - s_lastAnyTxTick)  >= TX_KEEPALIVE_INTERVAL_MS;
 
     LoRa_TxResult result = LORA_TX_SKIPPED;
@@ -630,6 +665,10 @@ LoRa_TxResult LoRa_Service(uint8_t tank_level, uint8_t well_dry)
     {
         UART_PrintLn("[LORA TX] CONNECTED — sending DATA");
         result = send_data_with_retries(tank_level, well_dry);
+        /* Remembered even on no-ACK: the 10 s cadence resends it, so a
+         * failed change is not retried every loop. */
+        s_sentLevel   = tank_level;
+        s_sentWellDry = well_dry;
     }
     else if (keepalive_due)
     {

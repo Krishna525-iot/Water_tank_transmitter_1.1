@@ -14,6 +14,28 @@
 #include "stm32f1xx_hal.h"
 #include "main.h"
 #include "lora_protocol.h"
+/* lora_protocol.h has its own radio/timing defaults; the values below
+ * in this file are the ones used (both boards must match). #undef first
+ * so they replace them cleanly instead of "redefined" warnings. */
+#undef LORA_ACK_WAIT_MS
+#undef LORA_HELLO_ACK_WAIT_MS
+#undef LORA_PREAMBLE_LSB
+#undef LORA_PREAMBLE_MSB
+#undef LORA_REG_DETECT_OPT
+#undef LORA_REG_MODEM_CFG1
+#undef LORA_REG_MODEM_CFG2
+#undef LORA_REG_OCP
+#undef LORA_REG_PA_CONFIG
+#undef LORA_REG_PA_DAC
+#undef LORA_RX_TO_TX_GAP_MS
+#undef LORA_SYNC_WORD
+#undef LORA_TX_TIMEOUT_MS
+#undef LORA_TX_TO_RX_GAP_MS
+#undef TX_DATA_INTERVAL_MS
+#undef TX_DATA_RETRY_MAX
+#undef TX_HELLO_RETRY_INTERVAL_MS
+#undef TX_KEEPALIVE_INTERVAL_MS
+#undef TX_NOACK_DISCONNECT_THRESH
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -43,8 +65,10 @@
 /* RegModemConfig1 (0x1D): BW=125kHz, CR=4/5, Explicit Header */
 #define LORA_REG_MODEM_CFG1       0x72
 
-/* RegModemConfig2 (0x1E): SF7, CRC ON */
-#define LORA_REG_MODEM_CFG2       0x74
+/* RegModemConfig2 (0x1E): SF10, CRC ON  (was SF7: 0x74) - range test 29-09:
+ * SF7 was at its limit at 10-15 m through walls; SF10 = +9 dB (~2-3x range).
+ * SF10/BW125: symbol 8.2 ms, no LowDataRateOptimize needed (MODEM_CFG3). */
+#define LORA_REG_MODEM_CFG2       0xA4
 
 /* RegModemConfig3 (0x26): LowDataRateOptimize=0, AgcAutoOn=1 */
 #define LORA_REG_MODEM_CFG3       0x04
@@ -65,14 +89,14 @@
 #define LORA_PREAMBLE_MSB         0x00
 #define LORA_PREAMBLE_LSB         0x08
 
-/* PA_BOOST, Pout=14dBm */
-#define LORA_REG_PA_CONFIG        0x8F
+/* PA_BOOST, +20 dBm (was 0x8F = +17 dBm). Both boards: the ACK goes back too */
+#define LORA_REG_PA_CONFIG        0xFF
 
-/* OCP ~100mA */
-#define LORA_REG_OCP              0x2B
+/* OCP ~240 mA (was ~100 mA - too low for +20 dBm, ~120 mA peak) */
+#define LORA_REG_OCP              0x3B
 
-/* Normal PA DAC */
-#define LORA_REG_PA_DAC           0x84
+/* PA DAC high power mode, needed for +20 dBm (was 0x84 normal) */
+#define LORA_REG_PA_DAC           0x87
 
 /* ── Timing ────────────────────────────────────────────────────────── */
 #define LORA_TX_TIMEOUT_MS              3000UL
